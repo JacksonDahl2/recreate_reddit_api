@@ -1,0 +1,32 @@
+{
+  "name": "free_reddit_api",
+  "version": "1.0.0",
+  "description": "reddit api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JacksonDahl2/free_reddit_api.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JacksonDahl2/free_reddit_api/issues"
+  },
+  "homepage": "https://github.com/JacksonDahl2/free_reddit_api#readme",
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.598.0",
+    "@sparticuz/chromium": "^123.0.1",
+    "is-lambda": "^1.0.1",
+    "playwright": "^1.44.1",
+    "winston": "^3.13.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.5.0",
+    "eslint": "^9.5.0",
+    "globals": "^15.6.0"
+  }
+}
