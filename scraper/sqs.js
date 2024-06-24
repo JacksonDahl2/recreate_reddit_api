@@ -1,6 +1,7 @@
 const {
   SQSClient,
   SendMessageBatchCommand,
+  SendMessageCommand,
 } = require('@aws-sdk/client-sqs')
 
 const client = new SQSClient({ region: "us-east-1" });
@@ -11,6 +12,16 @@ async function publishChunk(chunk) {
     QueueUrl: queueURL,
     Entries: chunk,
   });
+
+  await client.send(command)
+}
+
+exports.publishOne = async function (post) {
+  const command = new SendMessageCommand({
+    QueueUrl: queueURL,
+    MessageBody: JSON.stringify(post),
+    Id: post.id,
+  })
 
   await client.send(command)
 }
