@@ -1,5 +1,8 @@
 const playwright = require("playwright")
 const logger = require("./logger");
+const queue = require("./sqs")
+
+const connectionUrl = process.env.CONNECTION_URL
 
 async function parseComment(e) {
   const things = await e.$$("> .sidtetable > .thing");
@@ -23,6 +26,20 @@ async function parseComment(e) {
     comments.push({ author, time, comment, points, children, isDeleted });
   }
   return comments;
+}
+
+async function getDataForPosts(posts) {
+  return await Promise.all(
+    posts.map(async (post) => {
+      let browser = await playwright.chromium.connectOverCDP(connectionUrl);
+      let context = await browser.newContext();
+      let page = await context.newPage();
+
+      const data = await getPostData({ page, post });
+      await browser.close();
+      return data;
+    })
+  )
 }
 
 async function getPostData({ page, post }) {
@@ -86,9 +103,7 @@ async function getPostsOnPage(page) {
 }
 
 async function main() {
-  const browser = await playwright.chromium.launch({
-    headless: false,
-  });
+  const browser = await playwright.chromium.connectOverCDP(connectionUrl)
 
   const page = await browser.newPage();
 
@@ -119,14 +134,13 @@ async function main() {
   }
   posts = posts.filter((post) => post.timestamp > cutoff)
 
-  let data = []
+  const data = await getDataForPosts(posts); 
 
-  for (const post of posts) {
-    let postData = await getPostData({ post, page});
-    data.push(postData);
-  }
+  const nowStr = new Date().toISOString();
 
-  logger.info(`found ${posts.length} posts`)
+  await queue.publish(data.map((post) => ({ ...post, scrapedAt: nowStr })))
+
+  logger.info(`found ${data.length} posts`)
   await browser.close();
 }
 
