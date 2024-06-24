@@ -4,6 +4,34 @@ const queue = require("./sqs")
 
 const connectionUrl = process.env.CONNECTION_URL
 
+const addPageInterceptors = async (page) => {
+  await page.route("**/*", (route) => {
+    const request = route.request();
+    const resourceType = request.resourceType();
+    if (
+      resourceType === "image" ||
+      resourceType === "font" ||
+      resourceType === "stylesheet" ||
+      resourceType === "script" ||
+      resourceType === "media" 
+    ) {
+      route.abort();
+    } else {
+      route.continue();
+    }
+  });
+};
+
+const getAttributes = async (handle) => {
+  handle.evaluate((element) => {
+    const attributeMap = {};
+    for (const attr of element.attributes) {
+      attributeMap[attr.name] = attr.value;
+    }
+    return attributeMap;
+  });
+};
+
 async function parseComment(e) {
   const things = await e.$$("> .sidtetable > .thing");
   let comments = []; 
@@ -53,10 +81,12 @@ async function getPostData({ page, post }) {
 
   let id = post.id;
   let subreddit = post.subreddit;
-  let dataType = await thing.getAttribute("data-type");
-  let dataURL = await thing.getAttribute("data-url");
-  let isPromoted = (await thing.getAttribute("data-promoted")) == "true";
-  let isGallery = (await thing.getAttribute("data-gallery")) == "true";
+
+  const attributes = await getAttributes(thing)
+  let dataType = attributes["data-type"];
+  let dataURL = attributes["data-url"];
+  let isPromoted = attributes["data-promoted"] == "true";
+  let isGallery = attributes["data-gallery"] == "true";
   let title = await page.$eval("a.title", (el) => el.innerText)
   let points = parseInt(await sitetable.$(".score.unvoted").innerText);
   let text = await sitetable.$("div.usertext-body").innerText;
@@ -87,17 +117,17 @@ async function getPostsOnPage(page) {
   let posts = [];
 
   for (const element of elements) {
-    const id = await element.getAttribute("data-fullname");
-    const subreddit = await element.getAttribute("data-subreddit-prefixed");
-
-    const time = await element.$("time");
-    if (time == null) {
-      continue;
-    }
-    const timestamp = Date.parse(await time.getAttribute("datetime"));
+    const attributes = await getAttributes(element);
+    const id = attributes["data-fullname"];
+    const subreddit = attributes["data-subreddit-prefixed"];
+    const time = attributes["data-timestamp"];
+    const timestamp = Date.parse(dt);
+    const dt = await time.getAttributes("datetime");
     const author = await element.$eval(".author", (el) => el.innerText);
-    const url = await element.$eval("a.comments", (el) => el.getAttribute("href"));
-    posts.push({ id, subreddit, timestamp, author, url });
+    const url = await element.$eval("a.comments", (el) => el.getAttribute("href"))
+
+    const post = { id, subreddit, dt, timestamp, author, url}
+    posts.push(post)
   }
   return posts;
 }
